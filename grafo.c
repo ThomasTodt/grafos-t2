@@ -17,6 +17,8 @@ typedef struct {
 static int backtrack_conexo(grafo g, vertice atual, int *contador_vertices); // funcao que auxilia a funcao "conexo"
 static int backtrack_bipartido(grafo g, vertice v, int cor_atual);
 static void multiplica_matriz_adjacencia(int **A, int **B, int **C, int tamanho);
+void visit(grafo g, vertice u, vertice* stack, int *topo_stack);
+void assign(grafo g, vertice u, vertice root, grafo subgrafo);
 
 //------------------------------------------------------------------------------
 grafo le_grafo(void) 
@@ -352,7 +354,7 @@ grafo complemento(grafo g)
 }
 
 //------------------------------------------------------------------------------
-void visit(grafo g, vertice u)
+void visit(grafo g, vertice u, vertice* stack, int* topo_stack)
 {
   info_vertice *info;
   info = (info_vertice *) aggetrec(u, "info_vertice", TRUE);
@@ -366,37 +368,34 @@ void visit(grafo g, vertice u)
     // For each out-neighbour v of u, if v is unvisited, do Visit(v)
     for (Agedge_t *e = agfstout(g, u); e; e = agnxtout(g, e)) // esse agnxtout funciona? 
     {
-      info_vertice *info_vizinho;
-      info_vizinho = (info_vertice *) aggetrec(e->node, "info_vertice", TRUE);
-      if (info_vizinho->contado == 0)
-        visit(g, e->node)
+        visit(g, e->node, stack, topo_stack);
     }
 
     // prepend u to L
-
+    stack[(*topo_stack)++] = u; // TODO: talvez precise checar se nao vai estourar?
   }
 }
 
-void assign(grafo g, vertice u, vertice root)
+void assign(grafo g, vertice u, vertice root, grafo subgrafo)
 {
-  info_vertice *info;
-  info = (info_vertice *) aggetrec(u, "info_vertice", TRUE);
-
   info_vertice *info_root;
   info_root = (info_vertice *) aggetrec(root, "info_vertice", TRUE);
 
-  // If u has not been assigned to a component then:
-  if (info->componente == 0)
+  // For each in-neighbour v of u, do Assign(v,root)
+  for (Agedge_t *e = agfstin(g, u); e; e = agnxtin(g, e)) // esse agnxtout funciona? 
   {
-    // Assign u as belonging to the component whose root is root.
-    info->componente = info_root->componente;
+    info_vertice *info = (info_vertice *) aggetrec(e->node, "info_vertice", TRUE);
 
-    // For each in-neighbour v of u, do Assign(v,root)
-    for (Agedge_t *e = agfstin(g, u); e; e = agnxtin(g, e)) // esse agnxtout funciona? 
-    {
-      assign(g, e->node, root);
+    if (info->componente == 0) {
+      // adiciona ao componente do root.
+      info->componente = info_root->componente;
+
+      // adiciona ao subgrafo
+      agsubedge(subgrafo, e, TRUE);
+
+      // faz o mesmo pros vizinhos
+      assign(g, e->node, root, subgrafo);
     }
-
   }
   
 }
@@ -414,16 +413,34 @@ grafo decompoe(grafo g)
   }
 
   // "stack" L?
+  vertice *stack = (vertice*) calloc(agnnodes(g), sizeof(vertice));
+  int topo_stack = 0;
 
   // For each vertex u of the graph do Visit(u)
   for (vertice u = agfstnode(g); u; u = agnxtnode(g,u))
   {
-    visit(g, u);
+    visit(g, u, stack, &topo_stack);
   }
 
+  int id_subgrafo = 0; // TODO: teoricamente teria que ser um id unico, talvez de so pra usar uma string nao sei.
+
   // para cada u em L, em ordem
-  assign(g, u, u);
+  while (topo_stack != 0) {
+    vertice u = stack[--topo_stack];
+
+    info_vertice *info = (info_vertice *) aggetrec(u, "info_vertice", TRUE);
+
+    if (info->componente == 0) {
+      // Cria um subgrafo de g com ID único 
+      grafo s = agidsubg(g, id_subgrafo++, TRUE);
+      assign(g, u, u, s);
+    }
+    
+  }
+
+  free(stack);
 
   return g;
 }
 
+// vim: set sts=2 ts=2 sw=2 et:
