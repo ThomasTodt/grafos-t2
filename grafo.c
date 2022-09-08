@@ -372,7 +372,7 @@ void visit(grafo g, vertice u, vertice* stack, int* topo_stack)
     }
 
     // prepend u to L
-    stack[(*topo_stack)++] = u; // TODO: talvez precise checar se nao vai estourar?
+    stack[(*topo_stack)++] = u;
   }
 }
 
@@ -381,20 +381,28 @@ void assign(grafo g, vertice u, vertice root, grafo subgrafo)
   info_vertice *info_root;
   info_root = (info_vertice *) aggetrec(root, "info_vertice", TRUE);
 
+
   // For each in-neighbour v of u, do Assign(v,root)
   for (Agedge_t *e = agfstin(g, u); e; e = agnxtin(g, e)) // esse agnxtout funciona? 
   {
-    info_vertice *info = (info_vertice *) aggetrec(e->node, "info_vertice", TRUE);
+    info_vertice *info_prox = (info_vertice *) aggetrec(e->node, "info_vertice", TRUE);
 
-    if (info->componente == 0) {
+    if (info_prox->componente == 0) {
+      // não definiu o componente ainda
+
       // adiciona ao componente do root.
-      info->componente = info_root->componente;
+      info_prox->componente = info_root->componente;
 
-      // adiciona ao subgrafo
+      // adiciona arestas e seus vértices ao subgrafo do componente
       agsubedge(subgrafo, e, TRUE);
 
       // faz o mesmo pros vizinhos
       assign(g, e->node, root, subgrafo);
+    }
+
+    if (info_prox->componente == info_root->componente) {
+      // adiciona a aresta ao subgrafo/componente
+      agsubedge(subgrafo, e, TRUE);
     }
   }
   
@@ -422,7 +430,7 @@ grafo decompoe(grafo g)
     visit(g, u, stack, &topo_stack);
   }
 
-  int id_subgrafo = 0; // TODO: teoricamente teria que ser um id unico, talvez de so pra usar uma string nao sei.
+  int id_componente = 0;
 
   // para cada u em L, em ordem
   while (topo_stack != 0) {
@@ -431,8 +439,15 @@ grafo decompoe(grafo g)
     info_vertice *info = (info_vertice *) aggetrec(u, "info_vertice", TRUE);
 
     if (info->componente == 0) {
-      // Cria um subgrafo de g com ID único 
-      grafo s = agidsubg(g, id_subgrafo++, TRUE);
+      // Cria um subgrafo de g para servir de componente.
+      grafo s = agsubg(g, NULL, TRUE);
+
+      // adiciona u a seu próprio componente
+      agsubnode(s, u, TRUE);
+
+      // seta um novo id para o componente
+      info->componente = ++id_componente;
+
       assign(g, u, u, s);
     }
     
