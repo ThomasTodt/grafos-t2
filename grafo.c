@@ -2,6 +2,9 @@
 #include <graphviz/cgraph.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+char rec_name[14] = "info_vertice";
 
 typedef struct {
   Agrec_t header;
@@ -12,6 +15,7 @@ typedef struct {
 typedef struct {
   Agrec_t header;
   int criada;
+  int padding;
 } info_aresta;
 
 static int backtrack_conexo(grafo g, vertice atual, int *contador_vertices); // funcao que auxilia a funcao "conexo"
@@ -24,7 +28,8 @@ void assign(grafo g, vertice u, vertice root, grafo subgrafo);
 grafo le_grafo(void) 
 {
   grafo g = agread(stdin, NULL);
-  aginit(g, AGNODE, "info_vertice", sizeof(info_vertice), TRUE);
+  // strcpy(rec_name, "info_vertice");
+  aginit(g, AGNODE, rec_name, sizeof(info_vertice), TRUE);
   return g; 
 }
 //------------------------------------------------------------------------------
@@ -149,11 +154,12 @@ int completo(grafo g) {
 int conexo(grafo g) 
 {
   info_vertice *info;
+  // strcpy(rec_name, "info_vertice");
 
   for (vertice v = agfstnode(g); v; v = agnxtnode(g,v))
   {
-    //info = agbindrec(v, "info_vertice", sizeof(info_vertice), TRUE);
-    info = (info_vertice *) aggetrec(v, "info_vertice", TRUE);
+    //info = agbindrec(v, rec_name, sizeof(info_vertice), TRUE);
+    info = (info_vertice *) aggetrec(v, rec_name, TRUE);
     info->contado = 0;
   }
 
@@ -165,7 +171,8 @@ int conexo(grafo g)
 static int backtrack_conexo(grafo g, vertice atual, int *contador_vertices) // funcao que auxilia a funcao "conexo"
 {
   info_vertice *info;
-  info = (info_vertice*) aggetrec(atual, "info_vertice", TRUE);
+  // strcpy(rec_name, "info_vertice");
+  info = (info_vertice*) aggetrec(atual, rec_name, TRUE);
 
   if (info->contado == 0) // contabiliza o vertice
   {
@@ -195,10 +202,11 @@ static int backtrack_conexo(grafo g, vertice atual, int *contador_vertices) // f
 /// funcao auxiliar que checa se o componente do vertice v é um subgrafo bipartido.
 int bipartido(grafo g) {
   info_vertice *info;
+  // strcpy(rec_name, "info_vertice");
 
   for (vertice v = agfstnode(g); v; v = agnxtnode(g,v))
   {
-    info = (info_vertice *) aggetrec(v, "info_vertice", TRUE);
+    info = (info_vertice *) aggetrec(v, rec_name, TRUE);
     info->contado = -1;
   }
 
@@ -214,7 +222,8 @@ int bipartido(grafo g) {
 
 static int backtrack_bipartido(grafo g, vertice v, int cor_atual) {
   info_vertice *info;
-  info = (info_vertice *) aggetrec(v, "info_vertice", TRUE);
+  // strcpy(rec_name, "info_vertice");
+  info = (info_vertice *) aggetrec(v, rec_name, TRUE);
   if (info == NULL) {
     printf("eita\n");
   }
@@ -332,7 +341,9 @@ int **matriz_adjacencia(grafo g)
 // -----------------------------------------------------------------------------
 grafo complemento(grafo g)
 {
-  grafo h = agopen("complemento", g->desc, NULL);
+  char complemento[13] = "complemento"; 
+  char aresta[7] = "aresta";
+  grafo h = agopen(complemento, g->desc, NULL);
 
   // criando o mesmo numero de nodos no novo grafo
   for (vertice v = agfstnode(g); v; v = agnxtnode(g, v)) {
@@ -344,7 +355,7 @@ grafo complemento(grafo g)
       if (ga != gb && ha != hb) {
         if (!agedge(g, ga, gb, NULL, 0)) {
           // se nao existe no original, existe no complemento
-          agedge(h, ha, hb, "aresta", 1);
+          agedge(h, ha, hb, aresta, 1);
         }
       }
     }
@@ -357,7 +368,8 @@ grafo complemento(grafo g)
 void visit(grafo g, vertice u, vertice* stack, int* topo_stack)
 {
   info_vertice *info;
-  info = (info_vertice *) aggetrec(u, "info_vertice", TRUE);
+  // strcpy(rec_name, "info_vertice");
+  info = (info_vertice *) aggetrec(u, rec_name, TRUE);
 
   // If u is unvisited then:
   if (info->contado == 0)
@@ -379,13 +391,14 @@ void visit(grafo g, vertice u, vertice* stack, int* topo_stack)
 void assign(grafo g, vertice u, vertice root, grafo subgrafo)
 {
   info_vertice *info_root;
-  info_root = (info_vertice *) aggetrec(root, "info_vertice", TRUE);
+  // strcpy(rec_name, "info_vertice");
+  info_root = (info_vertice *) aggetrec(root, rec_name, TRUE);
 
 
   // For each in-neighbour v of u, do Assign(v,root)
   for (Agedge_t *e = agfstin(g, u); e; e = agnxtin(g, e)) // esse agnxtout funciona? 
   {
-    info_vertice *info_prox = (info_vertice *) aggetrec(e->node, "info_vertice", TRUE);
+    info_vertice *info_prox = (info_vertice *) aggetrec(e->node, rec_name, TRUE);
 
     if (info_prox->componente == 0) {
       // não definiu o componente ainda
@@ -411,17 +424,18 @@ void assign(grafo g, vertice u, vertice root, grafo subgrafo)
 grafo decompoe(grafo g) 
 {
   info_vertice *info;
+  // strcpy(rec_name, "info_vertice");
 
   // For each vertex u of the graph, mark u as unvisited. Let L be empty.
   for (vertice v = agfstnode(g); v; v = agnxtnode(g,v))
   {
-    info = (info_vertice *) aggetrec(v, "info_vertice", TRUE);
+    info = (info_vertice *) aggetrec(v, rec_name, TRUE);
     info->contado = 0; // nao visitado
     info->componente = 0; // nao faz parte de nenhum componente
   }
 
   // "stack" L?
-  vertice *stack = (vertice*) calloc(agnnodes(g), sizeof(vertice));
+  vertice *stack = (vertice*) calloc((size_t)agnnodes(g), sizeof(vertice));
   int topo_stack = 0;
 
   // For each vertex u of the graph do Visit(u)
@@ -436,9 +450,9 @@ grafo decompoe(grafo g)
   while (topo_stack != 0) {
     vertice u = stack[--topo_stack];
 
-    info_vertice *info = (info_vertice *) aggetrec(u, "info_vertice", TRUE);
+    info_vertice *info2 = (info_vertice *) aggetrec(u, rec_name, TRUE);
 
-    if (info->componente == 0) {
+    if (info2->componente == 0) {
       // Cria um subgrafo de g para servir de componente.
       grafo s = agsubg(g, NULL, TRUE);
 
@@ -446,7 +460,7 @@ grafo decompoe(grafo g)
       agsubnode(s, u, TRUE);
 
       // seta um novo id para o componente
-      info->componente = ++id_componente;
+      info2->componente = ++id_componente;
 
       assign(g, u, u, s);
     }
